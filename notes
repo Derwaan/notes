@@ -39,15 +39,17 @@ makenotes() {
             if [ -d "$course/Notes" ]; then
                 cd "$course/Notes"
                 notes=$(getnotes)
-                echo "Compiling $notes notes..."
-                output_file="$course/"$(basename "$course")
+                if [ "$notes" != "" ]; then
+                    echo "Compiling $notes notes..."
+                    output_file="$course/"$(basename "$course")
 
-                oldifs=$IFS
-                IFS=$'\n'
+                    oldifs=$IFS
+                    IFS=$'\n'
 
-                makepdf "$output_file" "$notes"
+                    makepdf "$output_file" "$notes"
 
-                IFS=$oldifs
+                    IFS=$oldifs
+                fi
                 unset notes output_files oldifs
             fi
         done   
@@ -61,5 +63,5 @@ main() {
     esac
 }
 
-NOTES_DIR=/home/derwaan/Documents/Test
+NOTES_DIR=/home/derwaan/Documents/UCL
 main "$1"
