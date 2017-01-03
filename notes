@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+usage() {
+cat << EOF
+USAGE:
+
+    notes ["all"]
+
+EOF
+}
+
+makenotes() {
+    for year in $NOTES_DIR/*; do
+        for course in $year/*; do
+            if [ -d "$course/Notes" ]; then
+                notes=$(basename "$course")
+                echo "Compiling $notes notes..."
+            fi
+        done   
+    done
+}
+
+main() {
+    case "$1" in
+        "all") echo "Compiling notes..." && makenotes; exit 0;;
+        *) usage; exit 1;;
+    esac
+}
+
+NOTES_DIR=/home/derwaan/Documents/UCL
+main "$1"
