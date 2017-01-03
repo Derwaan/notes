@@ -11,12 +11,44 @@ USAGE:
 EOF
 }
 
+getnotes() {
+    ack -n "> Date: " . | \
+    while read line; do
+        course=$(echo "$line" | sed 's/\([^ ]*\) .*/\1/')
+        file=$(echo "$line" | sed 's/\([^:]*\):2:>.*$/\1/')
+        date=$(echo "$line" | sed 's/[^:]*:2:> Date: \(.*$\)/\1/')
+        echo "$course$date $file"
+    done|\
+    sort -n|\
+    while read line; do
+        file=$(echo "$line" | sed 's/[^ ]* \(.*\)/\1/')
+        echo "$file"
+    done
+    unset course file date
+}
+
+
+makepdf() {
+    pandoc -o "${1}.pdf" $2 && echo "Created ${1}.pdf"
+}
+
+
 makenotes() {
     for year in $NOTES_DIR/*; do
         for course in $year/*; do
             if [ -d "$course/Notes" ]; then
-                notes=$(basename "$course")
+                cd "$course/Notes"
+                notes=$(getnotes)
                 echo "Compiling $notes notes..."
+                output_file="$course/"$(basename "$course")
+
+                oldifs=$IFS
+                IFS=$'\n'
+
+                makepdf "$output_file" "$notes"
+
+                IFS=$oldifs
+                unset notes output_files oldifs
             fi
         done   
     done
@@ -24,10 +56,10 @@ makenotes() {
 
 main() {
     case "$1" in
-        "all") echo "Compiling notes..." && makenotes; exit 0;;
+        "all") echo "Compiling all notes..." && makenotes; exit 0;;
         *) usage; exit 1;;
     esac
 }
 
-NOTES_DIR=/home/derwaan/Documents/UCL
+NOTES_DIR=/home/derwaan/Documents/Test
 main "$1"
