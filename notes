@@ -29,7 +29,7 @@ getnotes() {
 
 
 makepdf() {
-    pandoc -o "${1}.pdf" $2 && echo "Created ${1}.pdf"
+    pandoc -s -S --normalize -o "${1}.pdf" $2 && echo "Created ${1}.pdf"
 }
 
 
@@ -63,5 +63,4 @@ main() {
     esac
 }
 
-NOTES_DIR=/home/derwaan/Documents/UCL
 main "$1"
