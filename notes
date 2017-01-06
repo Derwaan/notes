@@ -32,6 +32,26 @@ makepdf() {
     pandoc -s -S --normalize -o "${1}.pdf" $2 && echo "Created ${1}.pdf"
 }
 
+makehtml() {
+    pandoc -s -S --normalize -o "index.html" $2 && echo "Created index.html"
+
+    # Create site destination
+    dest=${1#$NOTES_DIR}
+    dest=${dest%% *}
+
+    # Move to the site
+    mkdir -p $SITE_DIR$dest
+    mv "index.html" $SITE_DIR$dest/.
+    cp -r "img" $SITE_DIR$dest/.
+    # Commit files
+    cd $SITE_DIR
+    dest=${dest#/*}
+    git add "$dest/index.html"
+    git add "$dest/img/*"
+    git commit -m "Add notes for $dest course"
+    git push
+}
+
 
 makenotes() {
     for year in $NOTES_DIR/*; do
@@ -42,11 +62,13 @@ makenotes() {
                 if [ "$notes" != "" ]; then
                     echo "Compiling $notes notes..."
                     output_file="$course/"$(basename "$course")
+                    echo "$output_file"
 
                     oldifs=$IFS
                     IFS=$'\n'
 
                     makepdf "$output_file" "$notes"
+                    makehtml "$output_file" "$notes"
 
                     IFS=$oldifs
                 fi
@@ -56,9 +78,33 @@ makenotes() {
     done
 }
 
+buildsite() {
+    cd $SITE_DIR
+    for year in $SITE_DIR/*; do
+        if [ -d $year ]; then
+            path=$(basename "$year")
+            echo "<a href='$path/'> $path</a> <br />" > "index.html"
+            cd $year
+            for course in $year/*; do
+                if [ -d $course ]; then
+                    path=$(basename "$course")
+                    echo $path
+                    echo "<a href='$path'>$path</a> <br />" > "index.html"
+                fi
+            done
+            git add "index.html"
+            cd ..
+        fi
+    done
+    git add "index.html"
+    git commit -m "Update site tree"
+    git push
+}
+
 main() {
     case "$1" in
         "all") echo "Compiling all notes..." && makenotes; exit 0;;
+        "site") echo "Generating site..." && buildsite; exit 0;;
         *) usage; exit 1;;
     esac
 }
