@@ -2,6 +2,11 @@
 
 set -e
 
+verbose='false'
+recursive='false'
+input=$(pwd)
+output=$(pwd)
+
 usage() {
 cat << EOF
 USAGE:
@@ -29,84 +34,41 @@ getnotes() {
 
 
 makepdf() {
-    pandoc -s -S --normalize -o "${1}.pdf" $2 && echo "Created ${1}.pdf"
-}
-
-makehtml() {
-    pandoc -s -S --normalize -o "index.html" $2 && echo "Created index.html"
-
-    # Create site destination
-    dest=${1#$NOTES_DIR}
-    dest=${dest%% *}
-
-    # Move to the site
-    mkdir -p $SITE_DIR$dest
-    mv "index.html" $SITE_DIR$dest/.
-    cp -r "img" $SITE_DIR$dest/.
-    # Commit files
-    cd $SITE_DIR
-    dest=${dest#/*}
-    git add "$dest/index.html"
-    git add "$dest/img/*"
-    git commit -m "Add notes for $dest course"
-    git push
-}
-
-
-makenotes() {
-    for year in $NOTES_DIR/*; do
-        for course in $year/*; do
-            if [ -d "$course/Notes" ]; then
-                cd "$course/Notes"
-                notes=$(getnotes)
-                if [ "$notes" != "" ]; then
-                    echo "Compiling $notes notes..."
-                    output_file="$course/"$(basename "$course")
-                    echo "$output_file"
-
-                    oldifs=$IFS
-                    IFS=$'\n'
-
-                    makepdf "$output_file" "$notes"
-                    makehtml "$output_file" "$notes"
-
-                    IFS=$oldifs
-                fi
-                unset notes output_files oldifs
-            fi
-        done   
-    done
-}
-
-buildsite() {
-    cd $SITE_DIR
-    for year in $SITE_DIR/*; do
-        if [ -d $year ]; then
-            path=$(basename "$year")
-            echo "<a href='$path/'> $path</a> <br />" > "index.html"
-            cd $year
-            for course in $year/*; do
-                if [ -d $course ]; then
-                    path=$(basename "$course")
-                    echo $path
-                    echo "<a href='$path'>$path</a> <br />" > "index.html"
-                fi
-            done
-            git add "index.html"
-            cd ..
-        fi
-    done
-    git add "index.html"
-    git commit -m "Update site tree"
-    git push
+    pandoc -s -S --normalize -o "${1}.pdf" $2
+    if [ "$verbose" == 'true' ]; then
+        echo "${1}.pdf created"
+    fi
 }
 
 main() {
-    case "$1" in
-        "all") echo "Compiling all notes..." && makenotes; exit 0;;
-        "site") echo "Generating site..." && buildsite; exit 0;;
-        *) usage; exit 1;;
-    esac
+    for each in $1/*; do
+        if ls $each/*.md &> /dev/null; then
+            cd "$each"
+            notes=$(getnotes)
+
+            if [ "$notes" != "" ]; then
+                output_file="$output/"$(basename "$each")
+                oldifs=$IFS
+                IFS=$'\n'
+                makepdf "$output_file" "$notes"
+                IFS=$oldifs
+
+            fi
+            unset notes output_file oldifs
+        elif [ -e $each ]; then
+            main "$each"
+        fi
+    done
 }
 
-main "$1"
+while getopts "hvo:i:r" flag; do
+    case "${flag}" in
+        h) usage; exit 0 ;;
+        v) verbose='true'; break ;;
+        r) recursive='true'; break ;;
+        o) output=$(readlink -f "${OPTARG}"); break ;;
+        i) input=$(readlink -f "${OPTARG}"); break ;;
+        *) echo "Unexpected option ${flag}"; exit 0 ;;
+    esac
+done
+main "$input"
