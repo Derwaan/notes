@@ -41,6 +41,20 @@ makepdf() {
 }
 
 main() {
+    if ls $1/*.md &> /dev/null; then
+        notes=$(getnotes)
+
+        if [ "$notes" != "" ]; then
+            output_file="$output/"$(basename "$output")
+            oldifs=$IFS
+            IFS=$'\n'
+            makepdf "$output_file" "$notes"
+            IFS=$oldifs
+
+        fi
+        unset notes output_file oldifs
+    fi
+
     for each in $1/*; do
         if ls $each/*.md &> /dev/null; then
             cd "$each"
@@ -55,7 +69,7 @@ main() {
 
             fi
             unset notes output_file oldifs
-        elif [ -e $each ]; then
+        elif [ -e "$each" ]; then
             main "$each"
         fi
     done
