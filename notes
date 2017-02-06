@@ -2,20 +2,30 @@
 
 set -e
 
+# Default args
 verbose='false'
 recursive='false'
 input=$(pwd)
 output=$(pwd)
 
+# Return the usage of the soft
 usage() {
 cat << EOF
-USAGE:
+Notes
+Compile a PDF file for each course form markdown files.
 
-    notes ["all"]
+Usage: notes [-i input_directory] [-o output_directory] [-v] [-r] [-h]
 
+Options:
+    -i input_directory: provide the input directory in which the notes are
+    -o output_directory: provide the output directory in which the PDF file will be compiled
+    -v: enable verbose mode
+    -r: enable recursive mode (not supported yet)
+    -h: display this help
 EOF
 }
 
+# Get every notes related to a cursus sorted by date
 getnotes() {
     ack -n "> Date: " . | \
     while read line; do
@@ -33,6 +43,9 @@ getnotes() {
 }
 
 
+# From the getnotes(), compile a PDF file
+# $1 is the output
+# $2 is the notes files
 makepdf() {
     pandoc -s -S --normalize -o "${1}.pdf" $2
     if [ "$verbose" == 'true' ]; then
@@ -40,7 +53,10 @@ makepdf() {
     fi
 }
 
+# Main function
+# $1 is the input
 main() {
+    # Check the current directory if any md files is in there
     if ls $1/*.md &> /dev/null; then
         notes=$(getnotes)
 
@@ -55,6 +71,7 @@ main() {
         unset notes output_file oldifs
     fi
 
+    # Go inside each directory check any md files
     for each in $1/*; do
         if ls $each/*.md &> /dev/null; then
             cd "$each"
@@ -70,11 +87,13 @@ main() {
             fi
             unset notes output_file oldifs
         elif [ -e "$each" ]; then
+            # Usage of recursivity ?
             main "$each"
         fi
     done
 }
 
+# Get args
 while getopts "hvo:i:r" flag; do
     case "${flag}" in
         h) usage; exit 0 ;;
